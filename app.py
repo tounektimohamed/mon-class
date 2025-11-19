@@ -240,6 +240,24 @@ HTML = """
             border-radius: 5px;
             border: 1px solid #3498db;
         }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -248,7 +266,7 @@ HTML = """
         <form method="POST" id="docxForm">
             <div class="form-group">
                 <label>القسم:</label>
-                <input type="text" name="classe" required placeholder="أدخل اسم القسم">
+                <input type="text" name="classe" value="سنة رابعة" required placeholder="أدخل اسم القسم">
             </div>
             
             <div class="form-group">
@@ -325,7 +343,12 @@ HTML = """
                 </select>
             </div>
             
-            <button type="submit" class="btn">إنشاء الملف</button>
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <p>جاري إنشاء الملف، يرجى الانتظار...</p>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">إنشاء الملف</button>
         </form>
     </div>
 
@@ -502,8 +525,8 @@ HTML = """
                                id="editInput-${index}"
                                placeholder="أدخل اسم المعيار">
                         <div style="display: flex; gap: 5px; justify-content: center;">
-                            <button class="btn-secondary" onclick="saveEdit(${index}, document.getElementById('editInput-${index}').value)">حفظ</button>
-                            <button class="btn-danger" onclick="cancelEdit()">إلغاء</button>
+                            <button type="button" class="btn-secondary" onclick="saveEdit(${index}, document.getElementById('editInput-${index}').value)">حفظ</button>
+                            <button type="button" class="btn-danger" onclick="cancelEdit()">إلغاء</button>
                         </div>
                     `;
                     selectedList.appendChild(editForm);
@@ -530,6 +553,7 @@ HTML = """
                     // زر المؤشرات
                     const indicatorsBtn = document.createElement('button');
                     indicatorsBtn.className = 'action-btn';
+                    indicatorsBtn.type = 'button'; // لمنع الإرسال التلقائي
                     indicatorsBtn.innerHTML = indicatorsConfig[criteria]?.useIndicators ? '📊✅' : '📊';
                     indicatorsBtn.title = indicatorsConfig[criteria]?.useIndicators ? 'المؤشرات مفعلة - انقر لإلغاء' : 'إضافة مؤشرات';
                     indicatorsBtn.onclick = () => toggleIndicators(criteria);
@@ -539,6 +563,7 @@ HTML = """
                     if (indicatorsConfig[criteria]?.useIndicators) {
                         const editIndicatorsBtn = document.createElement('button');
                         editIndicatorsBtn.className = 'action-btn';
+                        editIndicatorsBtn.type = 'button'; // لمنع الإرسال التلقائي
                         editIndicatorsBtn.innerHTML = '✏️';
                         editIndicatorsBtn.title = 'تعديل أسماء المؤشرات';
                         editIndicatorsBtn.onclick = () => editIndicatorNames(criteria);
@@ -548,6 +573,7 @@ HTML = """
                     // زر تعديل اسم المعيار
                     const editBtn = document.createElement('button');
                     editBtn.className = 'action-btn';
+                    editBtn.type = 'button'; // لمنع الإرسال التلقائي
                     editBtn.innerHTML = '✏️';
                     editBtn.title = 'تعديل اسم المعيار';
                     editBtn.onclick = () => startEdit(index);
@@ -556,6 +582,7 @@ HTML = """
                     // زر الحذف
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'action-btn';
+                    deleteBtn.type = 'button'; // لمنع الإرسال التلقائي
                     deleteBtn.innerHTML = '🗑️';
                     deleteBtn.title = 'حذف';
                     deleteBtn.onclick = () => removeFromSelected(index);
@@ -689,6 +716,67 @@ HTML = """
             }
         }
         
+        // منع الإرسال التلقائي للنموذج
+        document.getElementById('docxForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // التحقق من صحة البيانات
+            const subject = document.getElementById('matiere').value;
+            if (subject === 'أخرى') {
+                const otherSubject = document.getElementById('otherSubjectName').value.trim();
+                if (!otherSubject) {
+                    alert('يرجى إدخال اسم المادة');
+                    return;
+                }
+            }
+            
+            if (selectedCriteria.length === 0) {
+                alert('يرجى اختيار معايير التقييم');
+                return;
+            }
+            
+            // إظهار مؤشر التحميل
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const submitBtn = document.getElementById('submitBtn');
+            loadingIndicator.style.display = 'block';
+            submitBtn.disabled = true;
+            
+            // إرسال النموذج
+            const formData = new FormData(this);
+            
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // إنشاء رابط للتحميل
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'table.docx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+                // إخفاء مؤشر التحميل
+                loadingIndicator.style.display = 'none';
+                submitBtn.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('حدث خطأ أثناء إنشاء الملف. يرجى المحاولة مرة أخرى.');
+                loadingIndicator.style.display = 'none';
+                submitBtn.disabled = false;
+            });
+        });
+        
         // التهيئة الأولية
         document.addEventListener('DOMContentLoaded', function() {
             updateSuggestedCriteria();
@@ -703,7 +791,7 @@ group_old = [
     "أمنه عبد اللطيف","أروى يقين طنيش","اسامه بنضو","أنس الخطيب","إسراء بنمفتاح",
     "اياد بوحريه","إياد منصور عمار","المختار عبد الواحد","بادیس دقنيش","جاهد السياري",
     "رنيم العزلوك","ريتاج الطالب","رحمة الونيسي","زينب طنيش","زينب عبد الواحد",
-    "سلمان الشبلي","فادي القلعاوي","الجين الزردابي","ليان الطالبي","مؤمن بنمبارك",
+    "سلمان الشبلي","فادي القلعاوي","الجين الزردابي","ليان الطالBI","مؤمن بنمبارك",
     "محمد أمير الحمدي","محمد الطاهر مشيري","محمد زكرياء حلاوط","مريم الذكار",
     "ملاك عبد اللطيف","منال بوحربه","هديل بن حامد","ياسمين الحاجي","ياسمين المستيسر",
     "ياسين جويد","يقين بوروحه","يوسف الشيباني","يوسف بن يحي","يونس بوصفة"
@@ -722,7 +810,7 @@ group_new = [
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        classe = request.form.get("classe")
+        classe = request.form.get("classe", "سنة رابعة")
         matiere = request.form.get("matiere")
         other_subject_name = request.form.get("other_subject_name", "")
         
