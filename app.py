@@ -223,6 +223,23 @@ HTML = """
             border-radius: 3px;
             margin-bottom: 5px;
         }
+        .indicator-option {
+            background: #fff3cd;
+            padding: 8px;
+            border-radius: 3px;
+            margin: 5px 0;
+            border: 1px solid #ffeaa7;
+        }
+        .hidden {
+            display: none;
+        }
+        .other-subject-input {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #3498db;
+        }
     </style>
 </head>
 <body>
@@ -236,7 +253,7 @@ HTML = """
             
             <div class="form-group">
                 <label>نوع التقييم:</label>
-                <select id="matiere" name="matiere" required onchange="updateSuggestedCriteria()">
+                <select id="matiere" name="matiere" required onchange="handleSubjectChange()">
                     <option value="">اختر نوع التقييم</option>
                     <option value="التواصل الشفوي">التواصل الشفوي</option>
                     <option value="القراءة">القراءة</option>
@@ -244,6 +261,11 @@ HTML = """
                     <option value="قواعد اللغة">قواعد اللغة</option>
                     <option value="أخرى">أخرى</option>
                 </select>
+                
+                <div id="otherSubjectInput" class="other-subject-input hidden">
+                    <label>اسم المادة:</label>
+                    <input type="text" id="otherSubjectName" name="other_subject_name" placeholder="أدخل اسم المادة">
+                </div>
             </div>
             
             <div class="form-group">
@@ -254,7 +276,7 @@ HTML = """
                     <br>• اختر نوع التقييم أولاً
                     <br>• اسحب المعايير من القائمة المقترحة إلى قائمة المعايير المختارة
                     <br>• انقر على ✏️ لتعديل اسم المعيار
-                    <br>• يمكنك إضافة مؤشرات لكل معيار من الخيار أدناه
+                    <br>• انقر على 📊 لاختيار المؤشرات لكل معيار
                 </div>
 
                 <div class="criteria-section">
@@ -278,25 +300,10 @@ HTML = """
                 </div>
                 
                 <input type="hidden" name="criteria" id="criteriaInput" required>
-                <input type="hidden" name="use_indicators" id="useIndicatorsInput" value="false">
+                <input type="hidden" name="indicators_config" id="indicatorsConfigInput" value="{}">
                 
                 <div class="criteria-actions" style="justify-content: center; margin-top: 20px;">
                     <button type="button" class="btn-danger" onclick="clearAllCriteria()">حذف الكل</button>
-                </div>
-            </div>
-
-            <!-- خيار المؤشرات -->
-            <div class="form-group">
-                <div class="option-group">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="useIndicators" onchange="toggleIndicatorsOption()">
-                        <label for="useIndicators" style="margin: 0; font-weight: normal;">
-                            إضافة مؤشرات للتقييم (3 مؤشرات لكل معيار)
-                        </label>
-                    </div>
-                    <div id="indicatorsPreview" style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
-                        سيتم إضافة 3 أعمدة لكل معيار في الجدول النهائي
-                    </div>
                 </div>
             </div>
 
@@ -326,6 +333,8 @@ HTML = """
         let selectedCriteria = [];
         let suggestedCriteria = [];
         let editingIndex = -1;
+        let indicatorsConfig = {}; // {criteriaName: {useIndicators: boolean, indicatorNames: []}}
+        
         const subjectCriteria = {
             "التواصل الشفوي": [
                 "الملائمة", "التغنيم", "الانسجام", "الاتساق", "الثراء"
@@ -344,8 +353,22 @@ HTML = """
             ]
         };
         
+        function handleSubjectChange() {
+            const subject = document.getElementById('matiere').value;
+            const otherInput = document.getElementById('otherSubjectInput');
+            
+            if (subject === 'أخرى') {
+                otherInput.classList.remove('hidden');
+            } else {
+                otherInput.classList.add('hidden');
+            }
+            
+            updateSuggestedCriteria();
+        }
+        
         function updateCriteriaInput() {
             document.getElementById('criteriaInput').value = JSON.stringify(selectedCriteria);
+            document.getElementById('indicatorsConfigInput').value = JSON.stringify(indicatorsConfig);
             updateTablePreview();
         }
         
@@ -380,12 +403,21 @@ HTML = """
         function addToSelected(criteria) {
             if (!selectedCriteria.includes(criteria)) {
                 selectedCriteria.push(criteria);
+                // إعداد افتراضي للمؤشرات
+                if (!indicatorsConfig[criteria]) {
+                    indicatorsConfig[criteria] = {
+                        useIndicators: false,
+                        indicatorNames: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]
+                    };
+                }
                 renderSelectedCriteria();
                 updateSuggestedCriteria();
             }
         }
         
         function removeFromSelected(index) {
+            const criteria = selectedCriteria[index];
+            delete indicatorsConfig[criteria];
             selectedCriteria.splice(index, 1);
             renderSelectedCriteria();
             updateSuggestedCriteria();
@@ -397,7 +429,13 @@ HTML = """
         }
         
         function saveEdit(index, newValue) {
+            const oldValue = selectedCriteria[index];
             if (newValue.trim() && !selectedCriteria.includes(newValue.trim())) {
+                // تحديث التكوين إذا تغير الاسم
+                if (indicatorsConfig[oldValue]) {
+                    indicatorsConfig[newValue.trim()] = indicatorsConfig[oldValue];
+                    delete indicatorsConfig[oldValue];
+                }
                 selectedCriteria[index] = newValue.trim();
             }
             editingIndex = -1;
@@ -408,6 +446,38 @@ HTML = """
         function cancelEdit() {
             editingIndex = -1;
             renderSelectedCriteria();
+        }
+        
+        function toggleIndicators(criteria) {
+            if (!indicatorsConfig[criteria]) {
+                indicatorsConfig[criteria] = {
+                    useIndicators: true,
+                    indicatorNames: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]
+                };
+            } else {
+                indicatorsConfig[criteria].useIndicators = !indicatorsConfig[criteria].useIndicators;
+            }
+            updateCriteriaInput();
+        }
+        
+        function editIndicatorNames(criteria) {
+            if (!indicatorsConfig[criteria]) {
+                indicatorsConfig[criteria] = {
+                    useIndicators: true,
+                    indicatorNames: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]
+                };
+            }
+            
+            const newNames = [];
+            for (let i = 0; i < 3; i++) {
+                const currentName = indicatorsConfig[criteria].indicatorNames[i] || `مؤشر ${i+1}`;
+                const newName = prompt(`أدخل اسم المؤشر ${i+1} لـ "${criteria}":`, currentName);
+                if (newName === null) return; // المستخدم ألغى
+                newNames.push(newName.trim() || `مؤشر ${i+1}`);
+            }
+            
+            indicatorsConfig[criteria].indicatorNames = newNames;
+            updateCriteriaInput();
         }
         
         function renderSelectedCriteria() {
@@ -457,13 +527,33 @@ HTML = """
                     const actions = document.createElement('div');
                     actions.className = 'criteria-actions';
                     
+                    // زر المؤشرات
+                    const indicatorsBtn = document.createElement('button');
+                    indicatorsBtn.className = 'action-btn';
+                    indicatorsBtn.innerHTML = indicatorsConfig[criteria]?.useIndicators ? '📊✅' : '📊';
+                    indicatorsBtn.title = indicatorsConfig[criteria]?.useIndicators ? 'المؤشرات مفعلة - انقر لإلغاء' : 'إضافة مؤشرات';
+                    indicatorsBtn.onclick = () => toggleIndicators(criteria);
+                    actions.appendChild(indicatorsBtn);
+                    
+                    // زر تعديل أسماء المؤشرات
+                    if (indicatorsConfig[criteria]?.useIndicators) {
+                        const editIndicatorsBtn = document.createElement('button');
+                        editIndicatorsBtn.className = 'action-btn';
+                        editIndicatorsBtn.innerHTML = '✏️';
+                        editIndicatorsBtn.title = 'تعديل أسماء المؤشرات';
+                        editIndicatorsBtn.onclick = () => editIndicatorNames(criteria);
+                        actions.appendChild(editIndicatorsBtn);
+                    }
+                    
+                    // زر تعديل اسم المعيار
                     const editBtn = document.createElement('button');
                     editBtn.className = 'action-btn';
                     editBtn.innerHTML = '✏️';
-                    editBtn.title = 'تعديل';
+                    editBtn.title = 'تعديل اسم المعيار';
                     editBtn.onclick = () => startEdit(index);
                     actions.appendChild(editBtn);
                     
+                    // زر الحذف
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'action-btn';
                     deleteBtn.innerHTML = '🗑️';
@@ -474,21 +564,24 @@ HTML = """
                     item.appendChild(criteriaText);
                     item.appendChild(actions);
                     selectedList.appendChild(item);
+                    
+                    // عرض حالة المؤشرات
+                    if (indicatorsConfig[criteria]?.useIndicators) {
+                        const indicatorInfo = document.createElement('div');
+                        indicatorInfo.className = 'indicator-option';
+                        indicatorInfo.innerHTML = `
+                            <small>المؤشرات: ${indicatorsConfig[criteria].indicatorNames.join('، ')}</small>
+                        `;
+                        selectedList.appendChild(indicatorInfo);
+                    }
                 }
             });
             
             updateCriteriaInput();
         }
         
-        function toggleIndicatorsOption() {
-            const useIndicators = document.getElementById('useIndicators').checked;
-            document.getElementById('useIndicatorsInput').value = useIndicators;
-            updateTablePreview();
-        }
-        
         function updateTablePreview() {
             const preview = document.getElementById('tablePreview');
-            const useIndicators = document.getElementById('useIndicators').checked;
             
             if (selectedCriteria.length === 0) {
                 preview.innerHTML = '<div class="empty-message">سيظهر معاينة الجدول هنا بعد اختيار المعايير</div>';
@@ -497,55 +590,60 @@ HTML = """
             
             let html = '<table class="preview-table">';
             
-            if (useIndicators) {
-                // جدول مع المؤشرات
-                html += '<tr>';
-                html += '<th rowspan="2">اسم التلميذ</th>';
-                selectedCriteria.forEach(criteria => {
+            // حساب عدد الأعمدة
+            let totalCols = 1; // عمود الأسماء
+            selectedCriteria.forEach(criteria => {
+                if (indicatorsConfig[criteria]?.useIndicators) {
+                    totalCols += 3; // 3 مؤشرات
+                } else {
+                    totalCols += 1; // معيار واحد بدون مؤشرات
+                }
+            });
+            
+            // بناء رأس الجدول
+            html += '<tr>';
+            html += '<th rowspan="2">اسم التلميذ</th>';
+            
+            selectedCriteria.forEach(criteria => {
+                const useIndicators = indicatorsConfig[criteria]?.useIndicators;
+                if (useIndicators) {
                     html += `<th colspan="3">${criteria}</th>`;
-                });
-                html += '</tr>';
-                
-                html += '<tr>';
-                selectedCriteria.forEach(() => {
-                    html += '<th>مؤشر 1</th><th>مؤشر 2</th><th>مؤشر 3</th>';
-                });
-                html += '</tr>';
-                
-                // صفوف التلاميذ (3 صفوف كمثال)
-                for (let i = 1; i <= 3; i++) {
-                    html += '<tr>';
-                    html += `<td>التلميذ ${i}</td>`;
-                    selectedCriteria.forEach(() => {
-                        html += '<td></td><td></td><td></td>';
-                    });
-                    html += '</tr>';
+                } else {
+                    html += `<th rowspan="2">${criteria}</th>`;
                 }
-            } else {
-                // جدول بدون مؤشرات
+            });
+            html += '</tr>';
+            
+            // الصف الثاني للرأس (للمؤشرات فقط)
+            const hasIndicators = selectedCriteria.some(criteria => indicatorsConfig[criteria]?.useIndicators);
+            if (hasIndicators) {
                 html += '<tr>';
-                html += '<th>اسم التلميذ</th>';
                 selectedCriteria.forEach(criteria => {
-                    html += `<th>${criteria}</th>`;
+                    if (indicatorsConfig[criteria]?.useIndicators) {
+                        const names = indicatorsConfig[criteria].indicatorNames;
+                        html += `<th>${names[0]}</th><th>${names[1]}</th><th>${names[2]}</th>`;
+                    }
                 });
                 html += '</tr>';
-                
-                // صفوف التلاميذ (3 صفوف كمثال)
-                for (let i = 1; i <= 3; i++) {
-                    html += '<tr>';
-                    html += `<td>التلميذ ${i}</td>`;
-                    selectedCriteria.forEach(() => {
+            }
+            
+            // صفوف التلاميذ (3 صفوف كمثال)
+            for (let i = 1; i <= 3; i++) {
+                html += '<tr>';
+                html += `<td>التلميذ ${i}</td>`;
+                selectedCriteria.forEach(criteria => {
+                    if (indicatorsConfig[criteria]?.useIndicators) {
+                        html += '<td></td><td></td><td></td>';
+                    } else {
                         html += '<td></td>';
-                    });
-                    html += '</tr>';
-                }
+                    }
+                });
+                html += '</tr>';
             }
             
             html += '</table>';
             html += '<div style="text-align: center; margin-top: 10px; color: #7f8c8d; font-size: 12px;">';
-            html += useIndicators ? 
-                'هذا جدول مع المؤشرات - كل معيار له 3 خانات للمؤشرات' :
-                'هذا جدول بسيط بدون مؤشرات - كل معيار له خانة واحدة';
+            html += '🔹 = معيار بدون مؤشرات | 📊✅ = معيار مع مؤشرات';
             html += '</div>';
             
             preview.innerHTML = html;
@@ -554,6 +652,7 @@ HTML = """
         function clearAllCriteria() {
             if (confirm('هل أنت متأكد من حذف جميع المعايير المختارة؟')) {
                 selectedCriteria = [];
+                indicatorsConfig = {};
                 editingIndex = -1;
                 renderSelectedCriteria();
                 updateSuggestedCriteria();
@@ -625,11 +724,18 @@ def index():
     if request.method == "POST":
         classe = request.form.get("classe")
         matiere = request.form.get("matiere")
-        use_indicators = request.form.get("use_indicators") == "true"
+        other_subject_name = request.form.get("other_subject_name", "")
+        
+        # استخدام اسم المادة إذا كان "أخرى"
+        if matiere == "أخرى" and other_subject_name:
+            matiere = other_subject_name
         
         # Récupération des données
         criteria_json = request.form.get("criteria", "[]")
+        indicators_config_json = request.form.get("indicators_config", "{}")
+        
         criteria = json.loads(criteria_json)
+        indicators_config = json.loads(indicators_config_json)
         
         if not criteria:
             criteria = ["معيار 1", "معيار 2", "معيار 3"]
@@ -640,7 +746,7 @@ def index():
         # Création du document
         doc = Document()
         
-        # Configuration de la page - جعل الهوامش أصغر ليتسع الجدول
+        # Configuration de la page
         section = doc.sections[0]
         section.page_height = Cm(29.7)
         section.page_width = Cm(21.0)
@@ -666,63 +772,71 @@ def index():
 
         doc.add_paragraph().add_run().add_break()
 
-        # Création du tableau
-        if use_indicators:
-            # جدول مع المؤشرات
-            total_cols = 1 + (len(criteria) * 3)
-            table = doc.add_table(rows=2, cols=total_cols)
-            
-            # الصف الأول من الرأس
-            hdr_row1 = table.rows[0]
-            hdr_row1.cells[0].text = "اسم التلميذ"
-            hdr_row1.cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            
-            col_index = 1
-            for criterion in criteria:
-                # دمج 3 خانات لكل معيار
-                if col_index + 2 < total_cols:
-                    hdr_row1.cells[col_index].merge(hdr_row1.cells[col_index + 2])
-                
-                hdr_row1.cells[col_index].text = criterion
-                hdr_row1.cells[col_index].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                col_index += 3
+        # حساب عدد الأعمدة الإجمالي
+        total_cols = 1  # عمود الأسماء
+        for criterion in criteria:
+            config = indicators_config.get(criterion, {})
+            if config.get('useIndicators', False):
+                total_cols += 3  # 3 مؤشرات
+            else:
+                total_cols += 1  # معيار واحد
 
-            # الصف الثاني من الرأس (المؤشرات)
-            hdr_row2 = table.rows[1]
-            hdr_row2.cells[0].text = ""
-            
-            col_index = 1
-            for criterion in criteria:
-                for i in range(3):
-                    hdr_row2.cells[col_index + i].text = f"مؤشر {i+1}"
-                    hdr_row2.cells[col_index + i].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                col_index += 3
-        else:
-            # جدول بسيط بدون مؤشرات
-            total_cols = 1 + len(criteria)
-            table = doc.add_table(rows=1, cols=total_cols)
-            
-            # رأس الجدول
-            hdr_cells = table.rows[0].cells
-            hdr_cells[0].text = "اسم التلميذ"
-            hdr_cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            
-            for i, criterion in enumerate(criteria):
-                hdr_cells[i + 1].text = criterion
-                hdr_cells[i + 1].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-
-        # إعداد نمط الجدول
+        # تحديد عدد صفوف الرأس
+        header_rows = 2 if any(config.get('useIndicators', False) for config in indicators_config.values()) else 1
+        
+        # إنشاء الجدول
+        table = doc.add_table(rows=header_rows, cols=total_cols)
         table.style = 'Table Grid'
         table.autofit = False
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+        # بناء رأس الجدول
+        col_index = 1  # نبدأ من العمود الثاني (بعد عمود الأسماء)
         
-        # إضافة صفوف التلاميذ
-        start_row = 2 if use_indicators else 1
-        for name in names:
+        # الصف الأول من الرأس
+        table.rows[0].cells[0].text = "اسم التلميذ"
+        table.rows[0].cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        
+        for criterion in criteria:
+            config = indicators_config.get(criterion, {})
+            use_indicators = config.get('useIndicators', False)
+            
             if use_indicators:
-                row_cells = table.add_row().cells
+                # دمج 3 خانات للمعيار
+                if col_index + 2 < total_cols:
+                    table.rows[0].cells[col_index].merge(table.rows[0].cells[col_index + 2])
+                
+                table.rows[0].cells[col_index].text = criterion
+                table.rows[0].cells[col_index].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                col_index += 3
             else:
-                row_cells = table.add_row().cells
+                # معيار بدون مؤشرات - دمج الصفين
+                if header_rows == 2:
+                    table.rows[0].cells[col_index].merge(table.rows[1].cells[col_index])
+                
+                table.rows[0].cells[col_index].text = criterion
+                table.rows[0].cells[col_index].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                col_index += 1
+
+        # الصف الثاني من الرأس (للمؤشرات فقط)
+        if header_rows == 2:
+            col_index = 1
+            for criterion in criteria:
+                config = indicators_config.get(criterion, {})
+                use_indicators = config.get('useIndicators', False)
+                
+                if use_indicators:
+                    indicator_names = config.get('indicatorNames', ["مؤشر 1", "مؤشر 2", "مؤشر 3"])
+                    for i in range(3):
+                        table.rows[1].cells[col_index + i].text = indicator_names[i] if i < len(indicator_names) else f"مؤشر {i+1}"
+                        table.rows[1].cells[col_index + i].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                    col_index += 3
+                else:
+                    col_index += 1
+
+        # إضافة صفوف التلاميذ
+        for name in names:
+            row_cells = table.add_row().cells
             
             # عمود الأسماء - بدون تقطيع للسطر
             row_cells[0].text = name
@@ -734,10 +848,21 @@ def index():
                 paragraph.paragraph_format.keep_with_next = False
                 paragraph.paragraph_format.widow_control = False
             
-            # الخلايا الفارغة
-            for j in range(total_cols - 1):
-                row_cells[j + 1].text = ""
-                row_cells[j + 1].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            # ملء الخلايا الفارغة
+            col_index = 1
+            for criterion in criteria:
+                config = indicators_config.get(criterion, {})
+                use_indicators = config.get('useIndicators', False)
+                
+                if use_indicators:
+                    for i in range(3):
+                        row_cells[col_index + i].text = ""
+                        row_cells[col_index + i].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                    col_index += 3
+                else:
+                    row_cells[col_index].text = ""
+                    row_cells[col_index].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                    col_index += 1
 
         # تطبيق التنسيق على جميع الخلايا
         for row in table.rows:
@@ -751,35 +876,25 @@ def index():
                         run.font.name = 'Arial'
 
         # جعل الرأس عريض
-        header_rows = 2 if use_indicators else 1
         for i in range(header_rows):
             for cell in table.rows[i].cells:
                 for paragraph in cell.paragraphs:
                     for run in paragraph.runs:
                         run.font.bold = True
-
-        # تكبير الخط في الرأس قليلاً
-        for i in range(header_rows):
-            for cell in table.rows[i].cells:
-                for paragraph in cell.paragraphs:
-                    for run in paragraph.runs:
                         run.font.size = Pt(9)
 
         # حساب العرض الأمثل للأعمدة
         max_name_length = max(len(name) for name in names) if names else 10
         
-        # ضبط عرض الأعمدة بناءً على المحتوى
-        for i, column in enumerate(table.columns):
-            for cell in column.cells:
-                if i == 0:  # عمود الأسماء
-                    # حساب العرض بناءً على طول الأسماء
-                    width = min(max(Cm(2.5), Cm(max_name_length * 0.3)), Cm(6))
-                    cell.width = width
-                else:  # أعمدة المعايير والمؤشرات
-                    if use_indicators:
-                        cell.width = Cm(1.5)  # أضيق للمؤشرات
-                    else:
-                        cell.width = Cm(2.5)  # أوسع للمعايير بدون مؤشرات
+        # ضبط عرض الأعمدة
+        col_index = 0
+        for column in table.columns:
+            if col_index == 0:  # عمود الأسماء
+                width = min(max(Cm(2.5), Cm(max_name_length * 0.3)), Cm(6))
+                column.width = width
+            else:
+                column.width = Cm(1.8)  # أعمدة المعايير والمؤشرات
+            col_index += 1
 
         # إعداد RTL للجدول
         tbl = table._tbl
