@@ -1,6 +1,6 @@
 from flask import Flask, render_template_string, request, send_file
 from docx import Document
-from docx.shared import Pt, Cm, Inches
+from docx.shared import Pt, Cm
 from docx.oxml import OxmlElement, ns
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -72,9 +72,25 @@ HTML = """
             border-radius: 20px;
             display: inline-block;
             cursor: move;
+            position: relative;
         }
         .criteria-item:hover {
             background: #2980b9;
+        }
+        .criteria-item.editing {
+            background: #e74c3c;
+        }
+        .edit-input {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 14px;
+            text-align: center;
+            width: 120px;
+            outline: none;
+        }
+        .edit-input::placeholder {
+            color: rgba(255,255,255,0.7);
         }
         .criteria-input {
             display: flex;
@@ -129,6 +145,23 @@ HTML = """
         .predefined-item:hover {
             background: #c0392b;
         }
+        .edit-icon {
+            margin-right: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        .edit-icon:hover {
+            opacity: 1;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -148,6 +181,10 @@ HTML = """
             <div class="form-group">
                 <label>المعايير:</label>
                 
+                <div class="instructions">
+                    💡 <strong>تعليمات:</strong> انقر نقراً مزدوجاً على أي معيار لتعديل اسمه. اسحب المعايير لإعادة ترتيبها.
+                </div>
+                
                 <div class="predefined-criteria">
                     <strong>معايير جاهزة:</strong><br>
                     <span class="predefined-item" onclick="addPredefined('المشاركة في الحصة')">المشاركة في الحصة</span>
@@ -155,7 +192,6 @@ HTML = """
                     <span class="predefined-item" onclick="addPredefined('الاختبار التحريري')">الاختبار التحريري</span>
                     <span class="predefined-item" onclick="addPredefined('التطبيق العملي')">التطبيق العملي</span>
                     <span class="predefined-item" onclick="addPredefined('المشروع الجماعي')">المشروع الجماعي</span>
-                    <span class="predefined-item" onclick="addPredefined('التقويم المستمر')">التقويم المستمر</span>
                 </div>
                 
                 <div class="criteria-input">
@@ -164,7 +200,7 @@ HTML = """
                 </div>
                 
                 <div class="criteria-container" id="criteriaContainer" ondragover="allowDrop(event)">
-                    <div class="drag-info">اسحب المعايير لإعادة ترتيبها</div>
+                    <div class="drag-info">اسحب المعايير لإعادة ترتيبها - انقر نقراً مزدوجاً للتعديل</div>
                 </div>
                 <input type="hidden" name="criteria" id="criteriaInput" required>
             </div>
@@ -210,17 +246,66 @@ HTML = """
             renderCriteria();
         }
         
+        function editCriteria(index) {
+            const container = document.getElementById('criteriaContainer');
+            const items = container.querySelectorAll('.criteria-item');
+            const item = items[index];
+            
+            if (item.classList.contains('editing')) {
+                return; // Déjà en mode édition
+            }
+            
+            item.classList.add('editing');
+            const currentText = criteriaList[index];
+            
+            item.innerHTML = `
+                <input type="text" 
+                       class="edit-input" 
+                       value="${currentText}" 
+                       onblur="saveEdit(${index}, this.value)"
+                       onkeypress="handleEditKeypress(event, ${index}, this)"
+                       placeholder="أدخل اسم المعيار">
+            `;
+            
+            const input = item.querySelector('.edit-input');
+            input.focus();
+            input.select();
+        }
+        
+        function saveEdit(index, newValue) {
+            const trimmedValue = newValue.trim();
+            if (trimmedValue && !criteriaList.includes(trimmedValue)) {
+                criteriaList[index] = trimmedValue;
+            }
+            renderCriteria();
+        }
+        
+        function handleEditKeypress(event, index, input) {
+            if (event.key === 'Enter') {
+                saveEdit(index, input.value);
+            } else if (event.key === 'Escape') {
+                renderCriteria();
+            }
+        }
+        
         function renderCriteria() {
             const container = document.getElementById('criteriaContainer');
-            container.innerHTML = '<div class="drag-info">اسحب المعايير لإعادة ترتيبها</div>';
+            container.innerHTML = '<div class="drag-info">اسحب المعايير لإعادة ترتيبها - انقر نقراً مزدوجاً للتعديل</div>';
+            
+            if (criteriaList.length === 0) {
+                container.innerHTML += '<div class="drag-info">لا توجد معايير مضافة</div>';
+            }
             
             criteriaList.forEach((criteria, index) => {
                 const item = document.createElement('div');
                 item.className = 'criteria-item';
-                item.textContent = criteria;
+                item.innerHTML = `
+                    <span class="edit-icon" onclick="editCriteria(${index})">✏️</span>
+                    ${criteria}
+                `;
                 item.draggable = true;
                 item.ondragstart = (e) => dragStart(e, index);
-                item.ondblclick = () => removeCriteria(index);
+                item.ondblclick = () => editCriteria(index);
                 container.appendChild(item);
             });
             
@@ -257,12 +342,19 @@ HTML = """
             }
         });
         
-        // إضافة بعض المعايير الافتراضية عند التحميل
-        setTimeout(() => {
-            addPredefined('المشاركة في الحصة');
-            addPredefined('إنجاز الواجبات');
-            addPredefined('الاختبار التحريري');
-        }, 100);
+        // إضافة المعايير الافتراضية عند التحميل
+        document.addEventListener('DOMContentLoaded', function() {
+            // إضافة المعايير الافتراضية من 1 إلى 5
+            setTimeout(() => {
+                const defaultCriteria = ["مع 1", "مع 2", "مع 3", "مع 4", "مع 5"];
+                defaultCriteria.forEach(criteria => {
+                    if (!criteriaList.includes(criteria)) {
+                        criteriaList.push(criteria);
+                    }
+                });
+                renderCriteria();
+            }, 100);
+        });
     </script>
 </body>
 </html>
@@ -299,7 +391,7 @@ def index():
         criteria_json = request.form.get("criteria", "[]")
         criteria = json.loads(criteria_json)
         if not criteria:
-            criteria = ["المشاركة في الحصة", "إنجاز الواجبات", "الاختبار التحريري"]
+            criteria = ["مع 1", "مع 2", "مع 3", "مع 4", "مع 5"]
 
         group_choice = request.form.get("group_choice")
         names = group_new if group_choice == "2" else group_old
@@ -307,7 +399,7 @@ def index():
         # Création du document amélioré
         doc = Document()
         
-        # En-tête du document
+        # Configuration de la page
         section = doc.sections[0]
         section.page_height = Cm(29.7)
         section.page_width = Cm(21.0)
@@ -400,7 +492,6 @@ def index():
         footer_run.font.size = Pt(9)
         footer_run.font.italic = True
         footer_run.font.name = 'Arial'
-        footer_run.font.color.rgb = None  # Couleur grise
 
         # Sauvegarde et retour du fichier
         f = io.BytesIO()
