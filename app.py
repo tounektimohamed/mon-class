@@ -196,6 +196,33 @@ HTML = """
             background-color: #f8f9fa;
             font-weight: bold;
         }
+        .option-group {
+            background: #e8f6f3;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #27ae60;
+            margin: 10px 0;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+        }
+        .edit-form {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            border: 1px dashed #3498db;
+        }
+        .edit-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -226,7 +253,8 @@ HTML = """
                     💡 <strong>تعليمات:</strong> 
                     <br>• اختر نوع التقييم أولاً
                     <br>• اسحب المعايير من القائمة المقترحة إلى قائمة المعايير المختارة
-                    <br>• كل معيار سيكون له 3 خانات للمؤشرات في الجدول النهائي
+                    <br>• انقر على ✏️ لتعديل اسم المعيار
+                    <br>• يمكنك إضافة مؤشرات لكل معيار من الخيار أدناه
                 </div>
 
                 <div class="criteria-section">
@@ -250,9 +278,25 @@ HTML = """
                 </div>
                 
                 <input type="hidden" name="criteria" id="criteriaInput" required>
+                <input type="hidden" name="use_indicators" id="useIndicatorsInput" value="false">
                 
                 <div class="criteria-actions" style="justify-content: center; margin-top: 20px;">
                     <button type="button" class="btn-danger" onclick="clearAllCriteria()">حذف الكل</button>
+                </div>
+            </div>
+
+            <!-- خيار المؤشرات -->
+            <div class="form-group">
+                <div class="option-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="useIndicators" onchange="toggleIndicatorsOption()">
+                        <label for="useIndicators" style="margin: 0; font-weight: normal;">
+                            إضافة مؤشرات للتقييم (3 مؤشرات لكل معيار)
+                        </label>
+                    </div>
+                    <div id="indicatorsPreview" style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
+                        سيتم إضافة 3 أعمدة لكل معيار في الجدول النهائي
+                    </div>
                 </div>
             </div>
 
@@ -281,6 +325,7 @@ HTML = """
     <script>
         let selectedCriteria = [];
         let suggestedCriteria = [];
+        let editingIndex = -1;
         const subjectCriteria = {
             "التواصل الشفوي": [
                 "الملائمة", "التغنيم", "الانسجام", "الاتساق", "الثراء"
@@ -340,13 +385,29 @@ HTML = """
             }
         }
         
-        function removeFromSelected(criteria) {
-            const index = selectedCriteria.indexOf(criteria);
-            if (index > -1) {
-                selectedCriteria.splice(index, 1);
-                renderSelectedCriteria();
-                updateSuggestedCriteria();
+        function removeFromSelected(index) {
+            selectedCriteria.splice(index, 1);
+            renderSelectedCriteria();
+            updateSuggestedCriteria();
+        }
+        
+        function startEdit(index) {
+            editingIndex = index;
+            renderSelectedCriteria();
+        }
+        
+        function saveEdit(index, newValue) {
+            if (newValue.trim() && !selectedCriteria.includes(newValue.trim())) {
+                selectedCriteria[index] = newValue.trim();
             }
+            editingIndex = -1;
+            renderSelectedCriteria();
+            updateSuggestedCriteria();
+        }
+        
+        function cancelEdit() {
+            editingIndex = -1;
+            renderSelectedCriteria();
         }
         
         function renderSelectedCriteria() {
@@ -359,35 +420,75 @@ HTML = """
                 return;
             }
             
-            selectedCriteria.forEach(criteria => {
-                const item = document.createElement('div');
-                item.className = 'criteria-item';
-                item.draggable = true;
-                item.ondragstart = (e) => dragStart(e, criteria, 'selected');
-                
-                const criteriaText = document.createElement('span');
-                criteriaText.textContent = criteria;
-                
-                const actions = document.createElement('div');
-                actions.className = 'criteria-actions';
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'action-btn';
-                deleteBtn.innerHTML = '🗑️';
-                deleteBtn.title = 'حذف';
-                deleteBtn.onclick = () => removeFromSelected(criteria);
-                actions.appendChild(deleteBtn);
-                
-                item.appendChild(criteriaText);
-                item.appendChild(actions);
-                selectedList.appendChild(item);
+            selectedCriteria.forEach((criteria, index) => {
+                if (editingIndex === index) {
+                    // وضع التعديل
+                    const editForm = document.createElement('div');
+                    editForm.className = 'edit-form';
+                    editForm.innerHTML = `
+                        <input type="text" 
+                               class="edit-input" 
+                               value="${criteria}" 
+                               id="editInput-${index}"
+                               placeholder="أدخل اسم المعيار">
+                        <div style="display: flex; gap: 5px; justify-content: center;">
+                            <button class="btn-secondary" onclick="saveEdit(${index}, document.getElementById('editInput-${index}').value)">حفظ</button>
+                            <button class="btn-danger" onclick="cancelEdit()">إلغاء</button>
+                        </div>
+                    `;
+                    selectedList.appendChild(editForm);
+                    
+                    // تركيز على حقل الإدخال
+                    setTimeout(() => {
+                        const input = document.getElementById(`editInput-${index}`);
+                        input.focus();
+                        input.select();
+                    }, 100);
+                } else {
+                    // عرض عادي
+                    const item = document.createElement('div');
+                    item.className = 'criteria-item';
+                    item.draggable = true;
+                    item.ondragstart = (e) => dragStart(e, criteria, 'selected');
+                    
+                    const criteriaText = document.createElement('span');
+                    criteriaText.textContent = criteria;
+                    
+                    const actions = document.createElement('div');
+                    actions.className = 'criteria-actions';
+                    
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'action-btn';
+                    editBtn.innerHTML = '✏️';
+                    editBtn.title = 'تعديل';
+                    editBtn.onclick = () => startEdit(index);
+                    actions.appendChild(editBtn);
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'action-btn';
+                    deleteBtn.innerHTML = '🗑️';
+                    deleteBtn.title = 'حذف';
+                    deleteBtn.onclick = () => removeFromSelected(index);
+                    actions.appendChild(deleteBtn);
+                    
+                    item.appendChild(criteriaText);
+                    item.appendChild(actions);
+                    selectedList.appendChild(item);
+                }
             });
             
             updateCriteriaInput();
         }
         
+        function toggleIndicatorsOption() {
+            const useIndicators = document.getElementById('useIndicators').checked;
+            document.getElementById('useIndicatorsInput').value = useIndicators;
+            updateTablePreview();
+        }
+        
         function updateTablePreview() {
             const preview = document.getElementById('tablePreview');
+            const useIndicators = document.getElementById('useIndicators').checked;
             
             if (selectedCriteria.length === 0) {
                 preview.innerHTML = '<div class="empty-message">سيظهر معاينة الجدول هنا بعد اختيار المعايير</div>';
@@ -396,34 +497,55 @@ HTML = """
             
             let html = '<table class="preview-table">';
             
-            // رأس الجدول - الصف الأول
-            html += '<tr>';
-            html += '<th rowspan="2">اسم التلميذ</th>';
-            selectedCriteria.forEach(criteria => {
-                html += `<th colspan="3">${criteria}</th>`;
-            });
-            html += '</tr>';
-            
-            // رأس الجدول - الصف الثاني (المؤشرات)
-            html += '<tr>';
-            selectedCriteria.forEach(() => {
-                html += '<th>مؤشر 1</th><th>مؤشر 2</th><th>مؤشر 3</th>';
-            });
-            html += '</tr>';
-            
-            // صفوف التلاميذ (3 صفوف كمثال)
-            for (let i = 1; i <= 3; i++) {
+            if (useIndicators) {
+                // جدول مع المؤشرات
                 html += '<tr>';
-                html += `<td>التلميذ ${i}</td>`;
-                selectedCriteria.forEach(() => {
-                    html += '<td></td><td></td><td></td>';
+                html += '<th rowspan="2">اسم التلميذ</th>';
+                selectedCriteria.forEach(criteria => {
+                    html += `<th colspan="3">${criteria}</th>`;
                 });
                 html += '</tr>';
+                
+                html += '<tr>';
+                selectedCriteria.forEach(() => {
+                    html += '<th>مؤشر 1</th><th>مؤشر 2</th><th>مؤشر 3</th>';
+                });
+                html += '</tr>';
+                
+                // صفوف التلاميذ (3 صفوف كمثال)
+                for (let i = 1; i <= 3; i++) {
+                    html += '<tr>';
+                    html += `<td>التلميذ ${i}</td>`;
+                    selectedCriteria.forEach(() => {
+                        html += '<td></td><td></td><td></td>';
+                    });
+                    html += '</tr>';
+                }
+            } else {
+                // جدول بدون مؤشرات
+                html += '<tr>';
+                html += '<th>اسم التلميذ</th>';
+                selectedCriteria.forEach(criteria => {
+                    html += `<th>${criteria}</th>`;
+                });
+                html += '</tr>';
+                
+                // صفوف التلاميذ (3 صفوف كمثال)
+                for (let i = 1; i <= 3; i++) {
+                    html += '<tr>';
+                    html += `<td>التلميذ ${i}</td>`;
+                    selectedCriteria.forEach(() => {
+                        html += '<td></td>';
+                    });
+                    html += '</tr>';
+                }
             }
             
             html += '</table>';
             html += '<div style="text-align: center; margin-top: 10px; color: #7f8c8d; font-size: 12px;">';
-            html += 'هذه معاينة مبسطة للجدول. الملف النهائي سيحتوي على جميع التلاميذ';
+            html += useIndicators ? 
+                'هذا جدول مع المؤشرات - كل معيار له 3 خانات للمؤشرات' :
+                'هذا جدول بسيط بدون مؤشرات - كل معيار له خانة واحدة';
             html += '</div>';
             
             preview.innerHTML = html;
@@ -432,6 +554,7 @@ HTML = """
         function clearAllCriteria() {
             if (confirm('هل أنت متأكد من حذف جميع المعايير المختارة؟')) {
                 selectedCriteria = [];
+                editingIndex = -1;
                 renderSelectedCriteria();
                 updateSuggestedCriteria();
             }
@@ -452,7 +575,10 @@ HTML = """
             ev.preventDefault();
             const data = JSON.parse(ev.dataTransfer.getData("text/plain"));
             if (data.source === 'selected') {
-                removeFromSelected(data.criteria);
+                const index = selectedCriteria.indexOf(data.criteria);
+                if (index > -1) {
+                    removeFromSelected(index);
+                }
             }
         }
         
@@ -499,6 +625,7 @@ def index():
     if request.method == "POST":
         classe = request.form.get("classe")
         matiere = request.form.get("matiere")
+        use_indicators = request.form.get("use_indicators") == "true"
         
         # Récupération des données
         criteria_json = request.form.get("criteria", "[]")
@@ -513,14 +640,14 @@ def index():
         # Création du document
         doc = Document()
         
-        # Configuration de la page
+        # Configuration de la page - جعل الهوامش أصغر ليتسع الجدول
         section = doc.sections[0]
         section.page_height = Cm(29.7)
         section.page_width = Cm(21.0)
-        section.left_margin = Cm(1.0)
-        section.right_margin = Cm(1.0)
-        section.top_margin = Cm(1.5)
-        section.bottom_margin = Cm(1.5)
+        section.left_margin = Cm(0.8)
+        section.right_margin = Cm(0.8)
+        section.top_margin = Cm(1.2)
+        section.bottom_margin = Cm(1.2)
         
         # Titre principal
         title = doc.add_heading(f"جدول التقييم - {matiere}", level=1)
@@ -534,50 +661,80 @@ def index():
         subtitle = doc.add_paragraph()
         subtitle.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
         subtitle_run = subtitle.add_run(f"القسم: {classe}")
-        subtitle_run.font.size = Pt(12)
+        subtitle_run.font.size = Pt(11)
         subtitle_run.font.name = 'Arial'
 
         doc.add_paragraph().add_run().add_break()
 
-        # Création du tableau avec la structure demandée
-        total_cols = 1 + (len(criteria) * 3)  # اسم + 3 خانات لكل معيار
-        
-        table = doc.add_table(rows=2, cols=total_cols)  # صفين للرأس
+        # Création du tableau
+        if use_indicators:
+            # جدول مع المؤشرات
+            total_cols = 1 + (len(criteria) * 3)
+            table = doc.add_table(rows=2, cols=total_cols)
+            
+            # الصف الأول من الرأس
+            hdr_row1 = table.rows[0]
+            hdr_row1.cells[0].text = "اسم التلميذ"
+            hdr_row1.cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            
+            col_index = 1
+            for criterion in criteria:
+                # دمج 3 خانات لكل معيار
+                if col_index + 2 < total_cols:
+                    hdr_row1.cells[col_index].merge(hdr_row1.cells[col_index + 2])
+                
+                hdr_row1.cells[col_index].text = criterion
+                hdr_row1.cells[col_index].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                col_index += 3
+
+            # الصف الثاني من الرأس (المؤشرات)
+            hdr_row2 = table.rows[1]
+            hdr_row2.cells[0].text = ""
+            
+            col_index = 1
+            for criterion in criteria:
+                for i in range(3):
+                    hdr_row2.cells[col_index + i].text = f"مؤشر {i+1}"
+                    hdr_row2.cells[col_index + i].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                col_index += 3
+        else:
+            # جدول بسيط بدون مؤشرات
+            total_cols = 1 + len(criteria)
+            table = doc.add_table(rows=1, cols=total_cols)
+            
+            # رأس الجدول
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = "اسم التلميذ"
+            hdr_cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            
+            for i, criterion in enumerate(criteria):
+                hdr_cells[i + 1].text = criterion
+                hdr_cells[i + 1].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+        # إعداد نمط الجدول
         table.style = 'Table Grid'
         table.autofit = False
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
         
-        # الصف الأول من الرأس (دمج الخلايا للمعايير)
-        hdr_row1 = table.rows[0]
-        hdr_row1.cells[0].text = "اسم التلميذ"
-        hdr_row1.cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        
-        col_index = 1
-        for criterion in criteria:
-            # دمج 3 خانات لكل معيار
-            if col_index + 2 < total_cols:
-                hdr_row1.cells[col_index].merge(hdr_row1.cells[col_index + 2])
-            
-            hdr_row1.cells[col_index].text = criterion
-            hdr_row1.cells[col_index].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            col_index += 3
-
-        # الصف الثاني من الرأس (المؤشرات)
-        hdr_row2 = table.rows[1]
-        hdr_row2.cells[0].text = ""  # الخلية الأولى فارغة
-        
-        col_index = 1
-        for criterion in criteria:
-            for i in range(3):
-                hdr_row2.cells[col_index + i].text = f"مؤشر {i+1}"
-                hdr_row2.cells[col_index + i].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            col_index += 3
-
         # إضافة صفوف التلاميذ
+        start_row = 2 if use_indicators else 1
         for name in names:
-            row_cells = table.add_row().cells
+            if use_indicators:
+                row_cells = table.add_row().cells
+            else:
+                row_cells = table.add_row().cells
+            
+            # عمود الأسماء - بدون تقطيع للسطر
             row_cells[0].text = name
             row_cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
             
+            # تعطيل التقاطع التلقائي للنص
+            for paragraph in row_cells[0].paragraphs:
+                paragraph.paragraph_format.keep_together = True
+                paragraph.paragraph_format.keep_with_next = False
+                paragraph.paragraph_format.widow_control = False
+            
+            # الخلايا الفارغة
             for j in range(total_cols - 1):
                 row_cells[j + 1].text = ""
                 row_cells[j + 1].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
@@ -586,39 +743,49 @@ def index():
         for row in table.rows:
             for cell in row.cells:
                 for paragraph in cell.paragraphs:
+                    paragraph.paragraph_format.space_before = Pt(0)
+                    paragraph.paragraph_format.space_after = Pt(0)
+                    paragraph.paragraph_format.line_spacing = 1.0
                     for run in paragraph.runs:
                         run.font.size = Pt(8)
                         run.font.name = 'Arial'
 
         # جعل الرأس عريض
-        for i in range(2):  # الصفين الأولين
+        header_rows = 2 if use_indicators else 1
+        for i in range(header_rows):
             for cell in table.rows[i].cells:
                 for paragraph in cell.paragraphs:
                     for run in paragraph.runs:
                         run.font.bold = True
 
-        # ضبط عرض الأعمدة
+        # تكبير الخط في الرأس قليلاً
+        for i in range(header_rows):
+            for cell in table.rows[i].cells:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.size = Pt(9)
+
+        # حساب العرض الأمثل للأعمدة
+        max_name_length = max(len(name) for name in names) if names else 10
+        
+        # ضبط عرض الأعمدة بناءً على المحتوى
         for i, column in enumerate(table.columns):
             for cell in column.cells:
                 if i == 0:  # عمود الأسماء
-                    cell.width = Cm(3.5)
-                else:  # أعمدة المؤشرات
-                    cell.width = Cm(1.8)
-
-        # تكبير الخط في الرأس قليلاً
-        for cell in table.rows[0].cells:
-            for paragraph in cell.paragraphs:
-                for run in paragraph.runs:
-                    run.font.size = Pt(9)
+                    # حساب العرض بناءً على طول الأسماء
+                    width = min(max(Cm(2.5), Cm(max_name_length * 0.3)), Cm(6))
+                    cell.width = width
+                else:  # أعمدة المعايير والمؤشرات
+                    if use_indicators:
+                        cell.width = Cm(1.5)  # أضيق للمؤشرات
+                    else:
+                        cell.width = Cm(2.5)  # أوسع للمعايير بدون مؤشرات
 
         # إعداد RTL للجدول
         tbl = table._tbl
         tblPr = tbl.tblPr
         bidi = OxmlElement('w:bidiVisual')
         tblPr.append(bidi)
-
-        # محاذاة الجدول
-        table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
         # Sauvegarde
         f = io.BytesIO()
