@@ -27,7 +27,7 @@ HTML = """
             margin: 0;
         }
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             padding: 30px;
@@ -56,58 +56,64 @@ HTML = """
             border-radius: 5px;
             font-size: 16px;
         }
-        .criteria-container {
+        .criteria-section {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .suggested-criteria, .selected-criteria {
+            flex: 1;
+        }
+        .suggested-container, .selected-container {
             border: 2px dashed #3498db;
             padding: 15px;
             border-radius: 5px;
             margin: 10px 0;
-            min-height: 100px;
+            min-height: 200px;
             background-color: #f8f9fa;
+        }
+        .suggested-item {
+            background: #2ecc71;
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            display: block;
+            cursor: move;
+            text-align: center;
+        }
+        .suggested-item:hover {
+            background: #27ae60;
         }
         .criteria-item {
             background: #3498db;
             color: white;
-            padding: 8px 15px;
+            padding: 10px 15px;
             margin: 5px;
             border-radius: 20px;
-            display: inline-block;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             cursor: move;
-            position: relative;
         }
         .criteria-item:hover {
             background: #2980b9;
         }
-        .criteria-item.editing {
-            background: #e74c3c;
+        .criteria-actions {
+            display: flex;
+            gap: 5px;
         }
-        .criteria-item.to-delete {
-            background: #e74c3c;
-            animation: shake 0.5s;
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-        .edit-input {
-            background: transparent;
+        .action-btn {
+            background: rgba(255,255,255,0.2);
             border: none;
             color: white;
-            font-size: 14px;
-            text-align: center;
-            width: 120px;
-            outline: none;
+            padding: 5px 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
         }
-        .edit-input::placeholder {
-            color: rgba(255,255,255,0.7);
-        }
-        .criteria-input {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .criteria-input input {
-            flex: 1;
+        .action-btn:hover {
+            background: rgba(255,255,255,0.3);
         }
         .btn {
             background: #3498db;
@@ -147,22 +153,6 @@ HTML = """
             font-style: italic;
             margin: 10px 0;
         }
-        .predefined-criteria {
-            margin: 15px 0;
-        }
-        .predefined-item {
-            background: #e74c3c;
-            color: white;
-            padding: 5px 10px;
-            margin: 3px;
-            border-radius: 15px;
-            display: inline-block;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .predefined-item:hover {
-            background: #c0392b;
-        }
         .instructions {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -171,50 +161,20 @@ HTML = """
             margin: 10px 0;
             font-size: 14px;
         }
-        .criteria-actions {
-            display: flex;
-            gap: 5px;
-            margin-top: 10px;
-            justify-content: center;
-        }
-        .delete-icon {
-            margin-right: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            opacity: 0.7;
-        }
-        .delete-icon:hover {
-            opacity: 1;
-            color: #ffeb3b;
-        }
-        .edit-icon {
-            margin-right: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            opacity: 0.7;
-        }
-        .edit-icon:hover {
-            opacity: 1;
-        }
-        .delete-confirm {
-            background: #e74c3c;
+        .section-title {
+            background: #34495e;
             color: white;
             padding: 10px;
             border-radius: 5px;
-            margin: 5px 0;
             text-align: center;
-        }
-        .delete-confirm-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 5px;
+            margin-bottom: 10px;
         }
         .indicators-container {
             margin-top: 10px;
             padding: 10px;
             background: #ecf0f1;
             border-radius: 5px;
+            display: none;
         }
         .indicator-input {
             display: flex;
@@ -232,30 +192,30 @@ HTML = """
             color: #7f8c8d;
             min-width: 80px;
         }
-        .toggle-indicators {
-            background: #9b59b6;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-        .toggle-indicators:hover {
-            background: #8e44ad;
-        }
-        .subject-criteria {
-            background: #d5edf7;
+        .indicator-option {
+            margin-top: 10px;
             padding: 10px;
+            background: #e8f6f3;
             border-radius: 5px;
-            margin: 10px 0;
+            border: 1px solid #27ae60;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+        }
+        .empty-message {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>إنشاء جدول DOCX ديناميكي</h2>
+        <h2>إنشاء جدول التقييم DOCX</h2>
         <form method="POST" id="docxForm">
             <div class="form-group">
                 <label>القسم:</label>
@@ -264,7 +224,7 @@ HTML = """
             
             <div class="form-group">
                 <label>نوع التقييم:</label>
-                <select id="matiere" name="matiere" required onchange="updateCriteriaBySubject()">
+                <select id="matiere" name="matiere" required onchange="updateSuggestedCriteria()">
                     <option value="">اختر نوع التقييم</option>
                     <option value="التواصل الشفوي">التواصل الشفوي</option>
                     <option value="القراءة">القراءة</option>
@@ -275,31 +235,56 @@ HTML = """
             </div>
             
             <div class="form-group">
-                <label>المعايير:</label>
+                <label>إعداد المعايير:</label>
                 
                 <div class="instructions">
                     💡 <strong>تعليمات:</strong> 
-                    <br>• اختر نوع التقييم لتحميل المعايير المقترحة
-                    <br>• انقر على ✏️ لتعديل اسم المعيار
-                    <br>• انقر على 🗑️ لحذف المعيار  
-                    <br>• انقر على 📊 لإظهار/إخفاء المؤشرات
-                    <br>• اسحب المعايير لإعادة ترتيبها
+                    <br>• اختر نوع التقييم أولاً
+                    <br>• اسحب المعايير من القائمة المقترحة إلى قائمة المعايير المختارة
+                    <br>• يمكنك إضافة مؤشرات لكل معيار إذا رغبت
                 </div>
 
-                <div id="subjectCriteria" class="subject-criteria" style="display: none;">
-                    <strong>المعايير المقترحة:</strong>
-                    <div id="suggestedCriteria"></div>
+                <div class="criteria-section">
+                    <!-- القائمة المقترحة -->
+                    <div class="suggested-criteria">
+                        <div class="section-title">المعايير المقترحة</div>
+                        <div class="suggested-container" id="suggestedContainer" ondragover="allowDrop(event)" ondrop="dropInSuggested(event)">
+                            <div class="drag-info">اسحب المعايير إلى القائمة المختارة</div>
+                            <div id="suggestedList"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- القائمة المختارة -->
+                    <div class="selected-criteria">
+                        <div class="section-title">المعايير المختارة</div>
+                        <div class="selected-container" id="selectedContainer" ondragover="allowDrop(event)" ondrop="dropInSelected(event)">
+                            <div class="drag-info">اسحب المعايير هنا</div>
+                            <div id="selectedList"></div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="criteria-container" id="criteriaContainer" ondragover="allowDrop(event)">
-                    <div class="drag-info">اسحب المعايير لإعادة ترتيبها</div>
-                </div>
                 <input type="hidden" name="criteria" id="criteriaInput" required>
                 <input type="hidden" name="indicators" id="indicatorsInput" required>
+                <input type="hidden" name="use_indicators" id="useIndicatorsInput" value="false">
                 
-                <div class="criteria-actions">
+                <div class="criteria-actions" style="justify-content: center; margin-top: 20px;">
                     <button type="button" class="btn-danger" onclick="clearAllCriteria()">حذف الكل</button>
-                    <button type="button" class="btn-secondary" onclick="addDefaultCriteria()">إضافة معايير افتراضية</button>
+                </div>
+            </div>
+
+            <!-- خيار المؤشرات -->
+            <div class="form-group">
+                <div class="indicator-option">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="useIndicators" onchange="toggleIndicatorsOption()">
+                        <label for="useIndicators" style="margin: 0; font-weight: normal;">
+                            إضافة مؤشرات للتقييم (3 مؤشرات لكل معيار)
+                        </label>
+                    </div>
+                    <div id="indicatorsPreview" style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
+                        سيتم إضافة 3 أعمدة لكل معيار في الجدول النهائي
+                    </div>
                 </div>
             </div>
             
@@ -316,265 +301,205 @@ HTML = """
     </div>
 
     <script>
-        let criteriaList = [];
+        let selectedCriteria = [];
+        let suggestedCriteria = [];
         let indicatorsData = {};
-        let itemToDelete = null;
         const subjectCriteria = {
             "التواصل الشفوي": [
-                {name: "الملائمة", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "التغنيم", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "الانسجام", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "الاتساق", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "الثراء", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]}
+                "الملائمة", "التغنيم", "الانسجام", "الاتساق", "الثراء"
             ],
             "القراءة": [
-                {name: "القراءة الجهرية", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "معالجة النص", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "التصرف في النص", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "إبداء الرأي", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]}
+                "القراءة الجهرية", "معالجة النص", "التصرف في النص", "إبداء الرأي"
             ],
             "الإنتاج الكتابي": [
-                {name: "الملائمة", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "سلامة بناء النص", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "المقروئية", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "ثراء اللغة والطرافة", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]}
+                "الملائمة", "سلامة بناء النص", "المقروئية", "ثراء اللغة والطرافة"
             ],
             "قواعد اللغة": [
-                {name: "التعرف على الظاهرة اللغوية", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]},
-                {name: "توظيف الظاهرة اللغوية", indicators: ["مؤشر 1", "مؤشر 2", "مؤشر 3"]}
+                "التعرف على الظاهرة اللغوية", "توظيف الظاهرة اللغوية"
+            ],
+            "أخرى": [
+                "معيار 1", "معيار 2", "معيار 3"
             ]
         };
         
         function updateCriteriaInput() {
-            document.getElementById('criteriaInput').value = JSON.stringify(criteriaList);
+            document.getElementById('criteriaInput').value = JSON.stringify(selectedCriteria);
             document.getElementById('indicatorsInput').value = JSON.stringify(indicatorsData);
         }
         
-        function updateCriteriaBySubject() {
+        function updateSuggestedCriteria() {
             const subject = document.getElementById('matiere').value;
-            const subjectDiv = document.getElementById('subjectCriteria');
-            const suggestedDiv = document.getElementById('suggestedCriteria');
+            const suggestedList = document.getElementById('suggestedList');
             
-            if (subjectCriteria[subject]) {
-                subjectDiv.style.display = 'block';
-                suggestedDiv.innerHTML = '';
-                
-                subjectCriteria[subject].forEach(criteria => {
-                    const item = document.createElement('span');
-                    item.className = 'predefined-item';
-                    item.textContent = criteria.name;
-                    item.onclick = () => addCriteriaWithIndicators(criteria.name, criteria.indicators);
-                    suggestedDiv.appendChild(item);
-                });
-            } else {
-                subjectDiv.style.display = 'none';
-            }
-        }
-        
-        function addCriteriaWithIndicators(criteriaName, defaultIndicators) {
-            if (!criteriaList.includes(criteriaName)) {
-                criteriaList.push(criteriaName);
-                indicatorsData[criteriaName] = [...defaultIndicators];
-                renderCriteria();
-            }
-        }
-        
-        function addDefaultCriteria() {
-            const defaultCriteria = ["مع 1", "مع 2", "مع 3"];
-            defaultCriteria.forEach(criteria => {
-                if (!criteriaList.includes(criteria)) {
-                    criteriaList.push(criteria);
-                    indicatorsData[criteria] = ["مؤشر 1", "مؤشر 2", "مؤشر 3"];
-                }
-            });
-            renderCriteria();
-        }
-        
-        function removeCriteria(index) {
-            const criteriaName = criteriaList[index];
-            delete indicatorsData[criteriaName];
-            criteriaList.splice(index, 1);
-            renderCriteria();
-            itemToDelete = null;
-        }
-        
-        function confirmDelete(index) {
-            itemToDelete = index;
-            renderCriteria();
-        }
-        
-        function cancelDelete() {
-            itemToDelete = null;
-            renderCriteria();
-        }
-        
-        function clearAllCriteria() {
-            if (confirm('هل أنت متأكد من حذف جميع المعايير؟')) {
-                criteriaList = [];
-                indicatorsData = {};
-                renderCriteria();
-            }
-        }
-        
-        function editCriteria(index) {
-            const container = document.getElementById('criteriaContainer');
-            const items = container.querySelectorAll('.criteria-item');
-            const item = items[index];
+            suggestedCriteria = subjectCriteria[subject] || [];
+            suggestedList.innerHTML = '';
             
-            if (item.classList.contains('editing')) {
+            if (suggestedCriteria.length === 0) {
+                suggestedList.innerHTML = '<div class="empty-message">لا توجد معايير مقترحة</div>';
                 return;
             }
             
-            item.classList.add('editing');
-            const currentText = criteriaList[index];
-            
-            item.innerHTML = `
-                <input type="text" 
-                       class="edit-input" 
-                       value="${currentText}" 
-                       onblur="saveEdit(${index}, this.value)"
-                       onkeypress="handleEditKeypress(event, ${index}, this)"
-                       placeholder="أدخل اسم المعيار">
-            `;
-            
-            const input = item.querySelector('.edit-input');
-            input.focus();
-            input.select();
-        }
-        
-        function saveEdit(index, newValue) {
-            const trimmedValue = newValue.trim();
-            if (trimmedValue && !criteriaList.includes(trimmedValue)) {
-                const oldName = criteriaList[index];
-                // نقل المؤشرات إلى الاسم الجديد
-                if (indicatorsData[oldName]) {
-                    indicatorsData[trimmedValue] = indicatorsData[oldName];
-                    delete indicatorsData[oldName];
+            suggestedCriteria.forEach(criteria => {
+                if (!selectedCriteria.includes(criteria)) {
+                    const item = document.createElement('div');
+                    item.className = 'suggested-item';
+                    item.textContent = criteria;
+                    item.draggable = true;
+                    item.ondragstart = (e) => dragStart(e, criteria, 'suggested');
+                    suggestedList.appendChild(item);
                 }
-                criteriaList[index] = trimmedValue;
-            }
-            renderCriteria();
-        }
-        
-        function handleEditKeypress(event, index, input) {
-            if (event.key === 'Enter') {
-                saveEdit(index, input.value);
-            } else if (event.key === 'Escape') {
-                renderCriteria();
-            }
-        }
-        
-        function toggleIndicators(criteriaName) {
-            const indicatorsDiv = document.getElementById(`indicators-${btoa(criteriaName)}`);
-            if (indicatorsDiv.style.display === 'none') {
-                indicatorsDiv.style.display = 'block';
-            } else {
-                indicatorsDiv.style.display = 'none';
-            }
-        }
-        
-        function updateIndicator(criteriaName, index, value) {
-            if (!indicatorsData[criteriaName]) {
-                indicatorsData[criteriaName] = ["مؤشر 1", "مؤشر 2", "مؤشر 3"];
-            }
-            indicatorsData[criteriaName][index] = value;
-            updateCriteriaInput();
-        }
-        
-        function renderCriteria() {
-            const container = document.getElementById('criteriaContainer');
-            container.innerHTML = '<div class="drag-info">اسحب المعايير لإعادة ترتيبها</div>';
+            });
             
-            if (criteriaList.length === 0) {
-                container.innerHTML += '<div class="drag-info">لا توجد معايير مضافة</div>';
+            if (suggestedList.children.length === 0) {
+                suggestedList.innerHTML = '<div class="empty-message">جميع المعايير مضافة</div>';
+            }
+        }
+        
+        function addToSelected(criteria) {
+            if (!selectedCriteria.includes(criteria)) {
+                selectedCriteria.push(criteria);
+                // إضافة مؤشرات افتراضية إذا كان الخيار مفعل
+                if (document.getElementById('useIndicators').checked) {
+                    indicatorsData[criteria] = ["مؤشر 1", "مؤشر 2", "مؤشر 3"];
+                }
+                renderSelectedCriteria();
+                updateSuggestedCriteria();
+            }
+        }
+        
+        function removeFromSelected(criteria) {
+            const index = selectedCriteria.indexOf(criteria);
+            if (index > -1) {
+                selectedCriteria.splice(index, 1);
+                delete indicatorsData[criteria];
+                renderSelectedCriteria();
+                updateSuggestedCriteria();
+            }
+        }
+        
+        function editIndicators(criteria) {
+            if (!document.getElementById('useIndicators').checked) {
+                alert('يجب تفعيل خيار المؤشرات أولاً');
+                return;
+            }
+            
+            const indicators = indicatorsData[criteria] || ["مؤشر 1", "مؤشر 2", "مؤشر 3"];
+            const newIndicators = [];
+            
+            for (let i = 0; i < 3; i++) {
+                const newName = prompt(`أدخل اسم المؤشر ${i + 1} لـ "${criteria}":`, indicators[i]);
+                if (newName === null) return; // User cancelled
+                newIndicators.push(newName.trim() || indicators[i]);
+            }
+            
+            indicatorsData[criteria] = newIndicators;
+            renderSelectedCriteria();
+        }
+        
+        function renderSelectedCriteria() {
+            const selectedList = document.getElementById('selectedList');
+            selectedList.innerHTML = '';
+            
+            if (selectedCriteria.length === 0) {
+                selectedList.innerHTML = '<div class="empty-message">لم يتم اختيار أي معايير</div>';
                 updateCriteriaInput();
                 return;
             }
             
-            criteriaList.forEach((criteria, index) => {
-                if (itemToDelete === index) {
-                    const deleteConfirm = document.createElement('div');
-                    deleteConfirm.className = 'delete-confirm';
-                    deleteConfirm.innerHTML = `
-                        هل تريد حذف "${criteria}"؟
-                        <div class="delete-confirm-buttons">
-                            <button class="btn-danger" onclick="removeCriteria(${index})">نعم، احذف</button>
-                            <button class="btn-secondary" onclick="cancelDelete()">إلغاء</button>
-                        </div>
-                    `;
-                    container.appendChild(deleteConfirm);
-                } else {
-                    const item = document.createElement('div');
-                    item.className = 'criteria-item';
-                    if (itemToDelete === index) {
-                        item.classList.add('to-delete');
-                    }
-                    item.innerHTML = `
-                        <span class="edit-icon" onclick="editCriteria(${index})" title="تعديل">✏️</span>
-                        <span class="delete-icon" onclick="confirmDelete(${index})" title="حذف">🗑️</span>
-                        <span style="margin-right: 5px; cursor: pointer;" onclick="toggleIndicators('${criteria}')" title="المؤشرات">📊</span>
-                        ${criteria}
-                    `;
-                    item.draggable = true;
-                    item.ondragstart = (e) => dragStart(e, index);
-                    container.appendChild(item);
-                    
-                    // إضافة المؤشرات
-                    const indicatorsDiv = document.createElement('div');
-                    indicatorsDiv.id = `indicators-${btoa(criteria)}`;
-                    indicatorsDiv.className = 'indicators-container';
-                    indicatorsDiv.style.display = 'none';
-                    
-                    if (!indicatorsData[criteria]) {
-                        indicatorsData[criteria] = ["مؤشر 1", "مؤشر 2", "مؤشر 3"];
-                    }
-                    
-                    indicatorsData[criteria].forEach((indicator, i) => {
-                        const indicatorDiv = document.createElement('div');
-                        indicatorDiv.className = 'indicator-input';
-                        indicatorDiv.innerHTML = `
-                            <span class="indicator-label">مؤشر ${i + 1}:</span>
-                            <input type="text" 
-                                   value="${indicator}" 
-                                   onchange="updateIndicator('${criteria}', ${i}, this.value)"
-                                   placeholder="أدخل اسم المؤشر">
-                        `;
-                        indicatorsDiv.appendChild(indicatorDiv);
-                    });
-                    
-                    container.appendChild(indicatorsDiv);
+            selectedCriteria.forEach(criteria => {
+                const item = document.createElement('div');
+                item.className = 'criteria-item';
+                item.draggable = true;
+                item.ondragstart = (e) => dragStart(e, criteria, 'selected');
+                
+                const criteriaText = document.createElement('span');
+                criteriaText.textContent = criteria;
+                
+                const actions = document.createElement('div');
+                actions.className = 'criteria-actions';
+                
+                if (document.getElementById('useIndicators').checked) {
+                    const indicatorsBtn = document.createElement('button');
+                    indicatorsBtn.className = 'action-btn';
+                    indicatorsBtn.innerHTML = '📊';
+                    indicatorsBtn.title = 'تعديل المؤشرات';
+                    indicatorsBtn.onclick = () => editIndicators(criteria);
+                    actions.appendChild(indicatorsBtn);
                 }
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'action-btn';
+                deleteBtn.innerHTML = '🗑️';
+                deleteBtn.title = 'حذف';
+                deleteBtn.onclick = () => removeFromSelected(criteria);
+                actions.appendChild(deleteBtn);
+                
+                item.appendChild(criteriaText);
+                item.appendChild(actions);
+                selectedList.appendChild(item);
             });
             
             updateCriteriaInput();
+        }
+        
+        function toggleIndicatorsOption() {
+            const useIndicators = document.getElementById('useIndicators').checked;
+            document.getElementById('useIndicatorsInput').value = useIndicators;
+            
+            if (useIndicators) {
+                // إضافة مؤشرات افتراضية للمعايير المختارة
+                selectedCriteria.forEach(criteria => {
+                    if (!indicatorsData[criteria]) {
+                        indicatorsData[criteria] = ["مؤشر 1", "مؤشر 2", "مؤشر 3"];
+                    }
+                });
+            } else {
+                // إزالة جميع المؤشرات
+                indicatorsData = {};
+            }
+            
+            renderSelectedCriteria();
+        }
+        
+        function clearAllCriteria() {
+            if (confirm('هل أنت متأكد من حذف جميع المعايير المختارة؟')) {
+                selectedCriteria = [];
+                indicatorsData = {};
+                renderSelectedCriteria();
+                updateSuggestedCriteria();
+            }
         }
         
         function allowDrop(ev) {
             ev.preventDefault();
         }
         
-        function dragStart(ev, index) {
-            ev.dataTransfer.setData("text/plain", index);
+        function dragStart(ev, criteria, source) {
+            ev.dataTransfer.setData("text/plain", JSON.stringify({
+                criteria: criteria,
+                source: source
+            }));
         }
         
-        document.getElementById('criteriaContainer').addEventListener('dragover', allowDrop);
-        
-        document.getElementById('criteriaContainer').addEventListener('drop', (ev) => {
+        function dropInSuggested(ev) {
             ev.preventDefault();
-            const fromIndex = parseInt(ev.dataTransfer.getData("text/plain"));
-            const items = Array.from(document.querySelectorAll('.criteria-item'));
-            const toIndex = items.indexOf(ev.target.closest('.criteria-item'));
-            
-            if (toIndex !== -1 && fromIndex !== toIndex) {
-                const [removed] = criteriaList.splice(fromIndex, 1);
-                criteriaList.splice(toIndex, 0, removed);
-                renderCriteria();
+            const data = JSON.parse(ev.dataTransfer.getData("text/plain"));
+            if (data.source === 'selected') {
+                removeFromSelected(data.criteria);
             }
-        });
+        }
         
-        // إضافة المعايير الافتراضية عند التحميل
+        function dropInSelected(ev) {
+            ev.preventDefault();
+            const data = JSON.parse(ev.dataTransfer.getData("text/plain"));
+            if (data.source === 'suggested') {
+                addToSelected(data.criteria);
+            }
+        }
+        
+        // التهيئة الأولية
         document.addEventListener('DOMContentLoaded', function() {
-            addDefaultCriteria();
+            updateSuggestedCriteria();
         });
     </script>
 </body>
@@ -608,19 +533,21 @@ def index():
         classe = request.form.get("classe")
         matiere = request.form.get("matiere")
         
-        # Récupération des critères et indicateurs depuis JSON
+        # Récupération des données
         criteria_json = request.form.get("criteria", "[]")
         indicators_json = request.form.get("indicators", "{}")
+        use_indicators = request.form.get("use_indicators") == "true"
+        
         criteria = json.loads(criteria_json)
         indicators = json.loads(indicators_json)
         
         if not criteria:
-            criteria = ["مع 1", "مع 2", "مع 3"]
+            criteria = ["معيار 1", "معيار 2", "معيار 3"]
 
         group_choice = request.form.get("group_choice")
         names = group_new if group_choice == "2" else group_old
 
-        # Création du document amélioré
+        # Création du document
         doc = Document()
         
         # Configuration de la page
@@ -658,13 +585,55 @@ def index():
 
         doc.add_paragraph().add_run().add_break()
 
-        # Tableau avec indicateurs
-        total_cols = 1  # Colonne des noms
-        for criterion in criteria:
-            # Pour chaque critère, on ajoute 3 colonnes pour les indicateurs
-            total_cols += 3
-        
-        table = doc.add_table(rows=1, cols=total_cols)
+        # Création du tableau
+        if use_indicators:
+            # Tableau avec indicateurs
+            total_cols = 1  # Colonne des noms
+            
+            for criterion in criteria:
+                total_cols += 3  # 3 colonnes pour chaque critère (المؤشرات)
+            
+            table = doc.add_table(rows=1, cols=total_cols)
+            
+            # En-têtes du tableau
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = "الاسم واللقب"
+            hdr_cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            
+            col_index = 1
+            for criterion in criteria:
+                # Fusionner les cellules pour le critère
+                if col_index + 2 < total_cols:
+                    hdr_cells[col_index].merge(hdr_cells[col_index + 2])
+                
+                hdr_cells[col_index].text = criterion
+                hdr_cells[col_index].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                
+                # Ajouter les indicateurs
+                indicator_names = indicators.get(criterion, ["مؤشر 1", "مؤشر 2", "مؤشر 3"])
+                for i in range(3):
+                    if col_index + i < total_cols:
+                        indicator_cell = table.rows[0].cells[col_index + i]
+                        indicator_cell.text = indicator_names[i] if i < len(indicator_names) else f"مؤشر {i+1}"
+                        indicator_cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                        indicator_cell.paragraphs[0].runs[0].font.size = Pt(9)
+                
+                col_index += 3
+        else:
+            # Tableau simple بدون مؤشرات
+            total_cols = 1 + len(criteria)
+            table = doc.add_table(rows=1, cols=total_cols)
+            
+            # En-têtes du tableau
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = "الاسم واللقب"
+            hdr_cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            
+            for i, criterion in enumerate(criteria):
+                hdr_cells[i + 1].text = criterion
+                hdr_cells[i + 1].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+        # Style du tableau
         table.style = 'Table Grid'
         table.autofit = False
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -675,36 +644,11 @@ def index():
         bidi = OxmlElement('w:bidiVisual')
         tblPr.append(bidi)
 
-        # En-têtes du tableau
-        hdr_cells = table.rows[0].cells
-        hdr_cells[0].text = "الاسم واللقب"
-        hdr_cells[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        
-        col_index = 1
-        for criterion in criteria:
-            # Fusionner les cellules pour le critère
-            if col_index + 2 < total_cols:
-                hdr_cells[col_index].merge(hdr_cells[col_index + 2])
-            
-            hdr_cells[col_index].text = criterion
-            hdr_cells[col_index].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            hdr_cells[col_index].paragraphs[0].runs[0].font.bold = True
-            
-            # Ajouter les indicateurs
-            indicator_names = indicators.get(criterion, ["مؤشر 1", "مؤشر 2", "مؤشر 3"])
-            for i in range(3):
-                if col_index + i < total_cols:
-                    indicator_cell = table.rows[0].cells[col_index + i] if i > 0 else hdr_cells[col_index + i]
-                    indicator_cell.text = indicator_names[i] if i < len(indicator_names) else f"مؤشر {i+1}"
-                    indicator_cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                    indicator_cell.paragraphs[0].runs[0].font.size = Pt(9)
-            
-            col_index += 3
-
         # Appliquer le style aux en-têtes
-        for i in range(total_cols):
+        for i in range(len(table.rows[0].cells)):
             cell = table.rows[0].cells[i]
             cell.paragraphs[0].runs[0].font.size = Pt(10)
+            cell.paragraphs[0].runs[0].font.bold = True
             cell.paragraphs[0].runs[0].font.name = 'Arial'
 
         # Lignes des étudiants
@@ -715,7 +659,7 @@ def index():
             row_cells[0].paragraphs[0].runs[0].font.size = Pt(9)
             row_cells[0].paragraphs[0].runs[0].font.name = 'Arial'
             
-            for j in range(total_cols - 1):
+            for j in range(len(row_cells) - 1):
                 row_cells[j + 1].text = ""
                 row_cells[j + 1].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
                 row_cells[j + 1].paragraphs[0].runs[0].font.size = Pt(9)
@@ -726,14 +670,15 @@ def index():
             for cell in column.cells:
                 if i == 0:  # Colonne des noms
                     cell.width = Cm(4.0)
-                else:  # Colonnes des indicateurs
-                    cell.width = Cm(2.0)
+                else:  # Colonnes des critères/المؤشرات
+                    cell.width = Cm(2.5)
 
         # Pied de page
         doc.add_paragraph().add_run().add_break()
         footer = doc.add_paragraph()
         footer.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        footer_run = footer.add_run("تم إنشاء هذا الجدول آلياً - نظام التقييم بالمؤشرات")
+        footer_text = "تم إنشاء هذا الجدول آلياً - نظام التقييم بالمؤشرات" if use_indicators else "تم إنشاء هذا الجدول آلياً"
+        footer_run = footer.add_run(footer_text)
         footer_run.font.size = Pt(9)
         footer_run.font.italic = True
         footer_run.font.name = 'Arial'
