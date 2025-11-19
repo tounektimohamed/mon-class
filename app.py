@@ -1,13 +1,16 @@
 from flask import Flask, render_template_string, request, send_file
 from docx import Document
 from docx.shared import Pt, Cm
+from docx.oxml import OxmlElement, ns
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import io
 import os
 
 app = Flask(__name__)
 
-HTML = """<!DOCTYPE html>
+# HTML pour le formulaire web
+HTML = """
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -42,10 +45,33 @@ button { padding: 10px 20px; font-size: 16px; }
 </html>
 """
 
-group_old = ["أمنه عبد اللطيف","أروى يقين طنيش","اسامه بنضو","أنس الخطيب","إسراء بنمفتاح"]  # et ainsi de suite
-group_new = ["احلام الغليظ","أحمد التايب","أحمد الحمزي","أيمن حلموس","إدريس القرسان"]  # etc.
+# -------------------------------
+# Groupes complets
+# -------------------------------
+group_old = [
+"أمنه عبد اللطيف","أروى يقين طنيش","اسامه بنضو","أنس الخطيب","إسراء بنمفتاح",
+"اياد بوحريه","إياد منصور عمار","المختار عبد الواحد","بادیس دقنيش","جاهد السياري",
+"رنيم العزلوك","ريتاج الطالب","رحمة الونيسي","زينب طنيش","زينب عبد الواحد",
+"سلمان الشبلي","فادي القلعاوي","الجين الزردابي","ليان الطالبي","مؤمن بنمبارك",
+"محمد أمير الحمدي","محمد الطاهر مشيري","محمد زكرياء حلاوط","مريم الذكار",
+"ملاك عبد اللطيف","منال بوحربه","هديل بن حامد","ياسمين الحاجي","ياسمين المستيسر",
+"ياسين جويد","يقين بوروحه","يوسف الشيباني","يوسف بن يحي","يونس بوصفة"
+]
 
-@app.route("/", methods=["GET","POST"])
+group_new = [
+"احلام الغليظ","أحمد التايب","أحمد الحمزي","أيمن حلموس","إدريس القرسان",
+"إسراء المرزوقي","باديس سكيب","بتول الفيتوري","تسنيم الطالب","خليل الشلاخ",
+"رضوان عبدالستار","رمزي المقدميني","رنیم خلفه","رنیم عازق","رياض لهول",
+"سيرين العربي","شيماء المورو","عبد الرحمان الوذان","عبد الرحمان بومروة",
+"الجين زهمول","محمد الطاهر بوطالب","محمد جاسم العطوي","محمد ياسين الجليدي",
+"مريم الذكار","مريم حسين","میار حسن","ميس بنصميده","ميار دباغي",
+"نزار عکار","نضال ابن غنيه","نادين مراحي","همام الغرياني","أميمة ذكار"
+]
+
+# -------------------------------
+# Route principale
+# -------------------------------
+@app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
         classe = request.form.get("classe")
@@ -58,34 +84,71 @@ def index():
         group_choice = request.form.get("group_choice")
         names = group_new if group_choice=="2" else group_old
 
+        # -------------------------------
+        # Création du document
+        # -------------------------------
         doc = Document()
-        doc.add_heading(f"جداول إسناد إعداد {matiere}", level=0).alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        doc.add_paragraph(f"القسم: {classe}    -    مدرسة الحبيب بورقيبة تطاوين").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        title = doc.add_heading(f"جداول إسناد إعداد {matiere}", level=0)
+        title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
+        subtitle = doc.add_paragraph(f"القسم: {classe}    -    مدرسة الحبيب بورقيبة تطاوين")
+        subtitle.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        subtitle.runs[0].font.size = Pt(14)
+        doc.add_paragraph("\n")
+
+        # Table
         cols = 1 + len(criteria)
         table = doc.add_table(rows=1, cols=cols)
         table.style = "Table Grid"
+        tbl = table._tbl
+        tblPr = tbl.find(ns.qn('w:tblPr'))
+        if tblPr is None:
+            tblPr = OxmlElement('w:tblPr')
+            tbl.insert(0, tblPr)
+        bidi = tblPr.find(ns.qn('w:bidiVisual'))
+        if bidi is None:
+            bidi = OxmlElement('w:bidiVisual')
+            tblPr.append(bidi)
+
+        # En-têtes
         hdr = table.rows[0].cells
         hdr[0].text = "الاسم"
+        hdr[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        hdr[0].paragraphs[0].runs[0].font.size = Pt(12)
         for i, c in enumerate(criteria):
             hdr[i+1].text = c
+            hdr[i+1].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            hdr[i+1].paragraphs[0].runs[0].font.size = Pt(12)
 
+        # Lignes
         for name in names:
             row = table.add_row().cells
             row[0].text = name
+            row[0].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            row[0].paragraphs[0].runs[0].font.size = Pt(11)
             for j in range(len(criteria)):
                 row[j+1].text = ""
+                row[j+1].paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                row[j+1].paragraphs[0].runs[0].font.size = Pt(11)
 
+        # Largeur des colonnes
+        for col in table.columns:
+            for cell in col.cells:
+                cell.width = Cm(3)
+
+        # Retourner le fichier DOCX
         f = io.BytesIO()
         doc.save(f)
         f.seek(0)
-        return send_file(f,
+        return send_file(
+            f,
             as_attachment=True,
             download_name="table_RTL_web.docx",
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
+
     return render_template_string(HTML)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
